@@ -1,25 +1,25 @@
 """
-Script para inserir notas de slides em um deck PowerPoint existente.
+Script to insert speaker notes into a PowerPoint deck.
 
-Uso:
-    python insert_notes_to_pptx.py <arquivo_notas> <arquivo_pptx> [--output arquivo_saida.pptx]
+Usage:
+    python insert_notes_to_pptx.py <notes_file> <pptx_file> [--output output_file.pptx]
 
-Formato do arquivo de notas:
-    As notas devem ser organizadas com cabeçalhos "Slide N" (ex: "Slide 1 — Título").
-    O script identifica o número do slide no cabeçalho e insere o texto subsequente
-    como nota do slide correspondente no PowerPoint.
+Notes file format:
+    Notes must be organized with "Slide N" headers (e.g., "Slide 1 — Title").
+    The script identifies the slide number in the header and inserts the subsequent
+    text as the speaker note for the corresponding slide in the PowerPoint.
 
-Exemplo de arquivo de notas (notas.txt):
-    Slide 1 — Introdução
+Example notes file (notes.txt):
+    Slide 1 — Introduction
 
-    Esta é a nota do slide 1.
-    Pode ter múltiplas linhas.
+    This is the note for slide 1.
+    It can have multiple lines.
 
-    Slide 3 — Conclusão
+    Slide 3 — Conclusion
 
-    Nota do slide 3. O slide 2 ficará sem nota.
+    Note for slide 3. Slide 2 will remain without a note.
 
-Se --output não for fornecido, o arquivo será salvo com sufixo "_com_notas".
+If --output is not provided, the file is saved with a "_com_notas" suffix.
 """
 
 import argparse
@@ -30,28 +30,28 @@ from pathlib import Path
 try:
     from pptx import Presentation
 except ImportError:
-    print("Erro: a biblioteca python-pptx é necessária.")
-    print("Instale com: pip install python-pptx")
+    print("Error: the python-pptx library is required.")
+    print("Install with: pip install python-pptx")
     sys.exit(1)
 
 
 def parse_notes_by_slide(notes_path: str) -> dict[int, str]:
     """
-    Lê o arquivo de notas e retorna um dicionário {número_do_slide: texto_da_nota}.
-    
-    Identifica cabeçalhos no formato "Slide N" (com variações como "Slide N —", 
-    "Slide N -", "Slide N:") e agrupa o texto subsequente como nota daquele slide.
+    Reads the notes file and returns a dictionary {slide_number: note_text}.
+
+    Identifies headers in the format "Slide N" (with variations like "Slide N —",
+    "Slide N -", "Slide N:") and groups the subsequent text as that slide's note.
     """
     path = Path(notes_path)
     if not path.exists():
-        print(f"Erro: arquivo de notas não encontrado: {notes_path}")
+        print(f"Error: notes file not found: {notes_path}")
         sys.exit(1)
 
     content = path.read_text(encoding="utf-8")
     lines = content.splitlines()
 
-    # Regex para identificar linhas de cabeçalho de slide
-    # Aceita: "Slide 1", "Slide 1 —", "Slide 1 -", "Slide 1:", etc.
+    # Regex to identify slide header lines
+    # Accepts: "Slide 1", "Slide 1 —", "Slide 1 -", "Slide 1:", etc.
     slide_header_pattern = re.compile(
         r"^\s*Slide\s+(\d+)\s*(?:[—\-:].*)?\s*$", re.IGNORECASE
     )
@@ -63,20 +63,20 @@ def parse_notes_by_slide(notes_path: str) -> dict[int, str]:
     for line in lines:
         match = slide_header_pattern.match(line)
         if match:
-            # Salva o bloco anterior se existir
+            # Save the previous block if it exists
             if current_slide_num is not None:
                 note_text = "\n".join(current_lines).strip()
                 if note_text:
                     notes_by_slide[current_slide_num] = note_text
 
-            # Inicia novo bloco
+            # Start a new block
             current_slide_num = int(match.group(1))
             current_lines = []
         else:
             if current_slide_num is not None:
                 current_lines.append(line)
 
-    # Salva o último bloco
+    # Save the last block
     if current_slide_num is not None:
         note_text = "\n".join(current_lines).strip()
         if note_text:
@@ -86,13 +86,13 @@ def parse_notes_by_slide(notes_path: str) -> dict[int, str]:
 
 
 def insert_notes(pptx_path: str, notes: dict[int, str], output_path: str):
-    """Insere notas nos slides correspondentes de um PowerPoint existente."""
+    """Inserts notes into the corresponding slides of an existing PowerPoint."""
     prs = Presentation(pptx_path)
     slides = list(prs.slides)
     total_slides = len(slides)
 
-    print(f"  Total de slides no PowerPoint: {total_slides}")
-    print(f"  Total de notas encontradas: {len(notes)}")
+    print(f"  Total slides in PowerPoint: {total_slides}")
+    print(f"  Total notes found: {len(notes)}")
     print()
 
     inserted = 0
@@ -100,46 +100,46 @@ def insert_notes(pptx_path: str, notes: dict[int, str], output_path: str):
 
     for slide_num, note_text in sorted(notes.items()):
         if slide_num < 1 or slide_num > total_slides:
-            print(f"  ⚠ Slide {slide_num}: não existe no PowerPoint (tem apenas {total_slides} slides). Ignorado.")
+            print(f"  ⚠ Slide {slide_num}: does not exist in PowerPoint (only {total_slides} slides). Skipped.")
             skipped += 1
             continue
 
-        slide = slides[slide_num - 1]  # Índice 0-based
+        slide = slides[slide_num - 1]  # 0-based index
         notes_slide = slide.notes_slide
         text_frame = notes_slide.notes_text_frame
         text_frame.text = note_text
-        print(f"  ✓ Slide {slide_num}: nota inserida ({len(note_text)} caracteres)")
+        print(f"  ✓ Slide {slide_num}: note inserted ({len(note_text)} characters)")
         inserted += 1
 
-    print(f"\nResumo: {inserted} notas inseridas, {skipped} ignoradas.")
+    print(f"\nSummary: {inserted} notes inserted, {skipped} skipped.")
     prs.save(output_path)
-    print(f"Arquivo salvo: {output_path}")
+    print(f"File saved: {output_path}")
 
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Insere notas de um arquivo texto nos slides correspondentes de um PowerPoint."
+        description="Insert notes from a text file into the corresponding slides of a PowerPoint."
     )
     parser.add_argument(
-        "notas",
-        help="Caminho para o arquivo de notas (com cabeçalhos 'Slide N')",
+        "notes",
+        help="Path to the notes file (with 'Slide N' headers)",
     )
     parser.add_argument(
         "pptx",
-        help="Caminho para o arquivo PowerPoint existente (.pptx)",
+        help="Path to the existing PowerPoint file (.pptx)",
     )
     parser.add_argument(
         "--output", "-o",
-        help="Caminho para o arquivo de saída (padrão: adiciona '_com_notas' ao nome)",
+        help="Path for the output file (default: appends '_com_notas' to the name)",
         default=None,
     )
 
     args = parser.parse_args()
 
-    # Valida que o pptx existe
+    # Validate that the pptx exists
     pptx_path = Path(args.pptx)
     if not pptx_path.exists():
-        print(f"Erro: arquivo PowerPoint não encontrado: {args.pptx}")
+        print(f"Error: PowerPoint file not found: {args.pptx}")
         sys.exit(1)
 
     # Define output path
@@ -148,16 +148,16 @@ def main():
     else:
         output_path = str(pptx_path.with_stem(pptx_path.stem + "_com_notas"))
 
-    print(f"Lendo notas de: {args.notas}")
-    notes = parse_notes_by_slide(args.notas)
+    print(f"Reading notes from: {args.notes}")
+    notes = parse_notes_by_slide(args.notes)
 
     if not notes:
-        print("Nenhuma nota encontrada no arquivo. Verifique se o formato usa 'Slide N' como cabeçalho.")
+        print("No notes found in file. Make sure the format uses 'Slide N' as headers.")
         sys.exit(1)
 
     slide_nums = sorted(notes.keys())
-    print(f"Notas encontradas para slides: {slide_nums[0]} a {slide_nums[-1]}")
-    print(f"\nInserindo notas em: {args.pptx}")
+    print(f"Notes found for slides: {slide_nums[0]} to {slide_nums[-1]}")
+    print(f"\nInserting notes into: {args.pptx}")
     insert_notes(args.pptx, notes, output_path)
 
 
