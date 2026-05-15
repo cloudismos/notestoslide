@@ -51,9 +51,10 @@ def parse_notes_by_slide(notes_path: str) -> dict[int, str]:
     lines = content.splitlines()
 
     # Regex to identify slide header lines
-    # Accepts: "Slide 1", "Slide 1 —", "Slide 1 -", "Slide 1:", etc.
+    # Accepts: "Slide 1", "Slide 1 —", "Slide 1 –", "Slide 1 -", "Slide 1:",
+    # "## Slide 1:", "# Slide 1 —", etc.
     slide_header_pattern = re.compile(
-        r"^\s*Slide\s+(\d+)\s*(?:[—\-:].*)?\s*$", re.IGNORECASE
+        r"^\s*#*\s*Slide\s+(\d+)\s*(?:[—–\-:].*)?\s*$", re.IGNORECASE
     )
 
     notes_by_slide: dict[int, str] = {}
@@ -74,6 +75,9 @@ def parse_notes_by_slide(notes_path: str) -> dict[int, str]:
             current_lines = []
         else:
             if current_slide_num is not None:
+                # Skip separator lines (e.g., "---")
+                if line.strip() == "---":
+                    continue
                 current_lines.append(line)
 
     # Save the last block
@@ -130,7 +134,7 @@ def main():
     )
     parser.add_argument(
         "--output", "-o",
-        help="Path for the output file (default: appends '_com_notas' to the name)",
+        help="Path for the output file (default: appends '_with_notes' to the name)",
         default=None,
     )
 
@@ -146,7 +150,7 @@ def main():
     if args.output:
         output_path = args.output
     else:
-        output_path = str(pptx_path.with_stem(pptx_path.stem + "_com_notas"))
+        output_path = str(pptx_path.with_stem(pptx_path.stem + "_with_notes"))
 
     print(f"Reading notes from: {args.notes}")
     notes = parse_notes_by_slide(args.notes)
