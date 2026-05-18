@@ -15,18 +15,10 @@ pip install python-pptx
 ## Usage
 
 ```bash
-python insert_notes_to_pptx.py <notes_file.txt> <file.pptx> [--output output.pptx]
+python insert_notes_to_pptx.py notes.txt deck_to_insert_the_notes.pptx
 ```
 
-### Examples
-
-```bash
-# Automatically generates "deck_com_notas.pptx"
-python insert_notes_to_pptx.py notes.txt deck.pptx
-
-# Specify the output file name
-python insert_notes_to_pptx.py notes.txt deck.pptx --output result.pptx
-```
+This generates a new file called `deck_with_notes.pptx` with the speaker notes inserted. The original file is not modified.
 
 ## Notes file format
 
