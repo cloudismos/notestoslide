@@ -1,4 +1,3 @@
-# notestoslide
 # PowerPoint Notes Inserter
 
 Python script to insert speaker notes into an existing PowerPoint (.pptx) file, automatically mapping each note to the correct slide based on the slide number in the text file.
@@ -10,7 +9,7 @@ The script reads a `.txt` file with notes organized under `Slide N` headers and 
 ## Installation
 
 ```bash
-pip install -r requirements.txt
+pip install python-pptx
 ```
 
 ## Usage
@@ -59,4 +58,4 @@ Note for slide 5. Slides without a matching header remain unchanged.
 ## Requirements
 
 - Python 3.10+
-- python-pptx
+- [python-pptx](https://python-pptx.readthedocs.io/)
