@@ -47,14 +47,32 @@ def parse_notes_by_slide(notes_path: str) -> dict[int, str]:
         print(f"Error: notes file not found: {notes_path}")
         sys.exit(1)
 
-    content = path.read_text(encoding="utf-8")
+    # Try UTF-8 first, then mac_roman (for Mac CR files), then latin-1 as fallback
+    raw = path.read_bytes()
+    try:
+        content = raw.decode("utf-8")
+    except UnicodeDecodeError:
+        # If file has CR line endings, it's likely Mac Roman
+        if b"\r" in raw and b"\n" not in raw:
+            content = raw.decode("mac_roman")
+            print("  ⚠ File is not UTF-8, decoded as Mac Roman.")
+        else:
+            try:
+                content = raw.decode("cp1252")
+                print("  ⚠ File is not UTF-8, decoded as Windows-1252.")
+            except UnicodeDecodeError:
+                content = raw.decode("latin-1")
+                print("  ⚠ File is not UTF-8, decoded as Latin-1.")
+
+    # Normalize line endings: \r\n -> \n, then \r -> \n
+    content = content.replace("\r\n", "\n").replace("\r", "\n")
     lines = content.splitlines()
 
     # Regex to identify slide header lines
     # Accepts: "Slide 1", "Slide 1 —", "Slide 1 –", "Slide 1 -", "Slide 1:",
-    # "## Slide 1:", "# Slide 1 —", etc.
+    # "## Slide 1:", "# Slide 1 —", "Slide 1 Ñ" (encoding artifact), etc.
     slide_header_pattern = re.compile(
-        r"^\s*#*\s*Slide\s+(\d+)\s*(?:[—–\-:].*)?\s*$", re.IGNORECASE
+        r"^\s*#*\s*Slide\s+(\d+)\s*(?:[—–\-:Ñ].*)?\s*$", re.IGNORECASE
     )
 
     notes_by_slide: dict[int, str] = {}
